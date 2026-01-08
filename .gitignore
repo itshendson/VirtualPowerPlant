@@ -1,0 +1,31 @@
+## Build artifacts
+[Bb]in/
+[Oo]bj/
+[Aa]rtifacts/
+publish/
+
+## Visual Studio / VS Code
+.vs/
+.vscode/
+*.user
+*.userosscache
+*.suo
+*.sln.docstates
+
+## Rider / IntelliJ
+.idea/
+
+## Test results / coverage
+TestResults/
+*.trx
+*.coverage
+*.coveragexml
+
+## Logs
+*.log
+
+## OS / misc
+.DS_Store
+Thumbs.db
+*.swp
+*.tmp
