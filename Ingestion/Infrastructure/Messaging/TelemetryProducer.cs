@@ -30,6 +30,21 @@ namespace Ingestion.Infrastructure.Messaging
             }, cancellationToken);
         }
 
+        public void Produce<TKey, TValue>(string topic, TKey key, TValue value, Headers? headers = null, Action<DeliveryReport<string, byte[]>>? deliveryHandler = null)
+        {
+            var keyString = key?.ToString() ?? string.Empty;
+            var payload = JsonSerializer.SerializeToUtf8Bytes(value);
+
+            _logger.LogDebug("Producing message to topic {Topic} with key {Key} and payload size {PayloadSize} bytes", topic, keyString, payload.Length);
+
+            _producer.Produce(topic, new Message<string, byte[]>
+            {
+                Key = keyString,
+                Value = payload,
+                Headers = headers
+            }, deliveryHandler);
+        }
+
         public ValueTask DisposeAsync()
         {
             try

@@ -1,11 +1,9 @@
-﻿using Confluent.Kafka;
-using Ingestion.Infrastructure.Configuration;
+﻿using Ingestion.Infrastructure.Configuration;
 using Ingestion.Infrastructure.Messaging;
 using Ingestion.Model;
 using MediatR;
 using Microsoft.AspNetCore.Http;
 using Microsoft.Extensions.Options;
-using System.Text;
 
 namespace Ingestion.Handlers
 {
@@ -15,13 +13,13 @@ namespace Ingestion.Handlers
     {
         private readonly ILogger<IngestTelemetryCommandHandler> _logger;
         private readonly KafkaOptions _kafkaOptions;
-        private readonly ITelemetryProducer _producer;
+        private readonly ITelemetryIngestBuffer _buffer;
 
-        public IngestTelemetryCommandHandler(ILogger<IngestTelemetryCommandHandler> logger, IOptions<KafkaOptions> kafkaOptions, ITelemetryProducer producer)
+        public IngestTelemetryCommandHandler(ILogger<IngestTelemetryCommandHandler> logger, IOptions<KafkaOptions> kafkaOptions, ITelemetryIngestBuffer buffer)
         {
             _logger = logger;
-            _producer = producer;
             _kafkaOptions = kafkaOptions.Value;
+            _buffer = buffer;
         }
 
         public async Task<CommandResult> Handle(IngestTelemetryCommand request, CancellationToken cancellationToken)
@@ -30,17 +28,17 @@ namespace Ingestion.Handlers
 
             try
             {
-                var headers = new Headers
-                {
-                    { "eventId", Encoding.ASCII.GetBytes(eventId) }
-                };
+                var workItem = new TelemetryIngestionWorkItem(
+                    Topic: _kafkaOptions.Topics.TelemetryRaw,
+                    Key: request.reading.MeterId,
+                    Value: request.reading,
+                    EventId: eventId);
 
-                await _producer.ProduceAsync<string, TelemetryReadingRequest>(
-                    topic: _kafkaOptions.Topics.TelemetryRaw,
-                    key: request.reading.MeterId,
-                    value: request.reading,
-                    headers: headers,
-                    cancellationToken: cancellationToken);
+                if (!_buffer.TryEnqueue(workItem))
+                {
+                    _logger.LogWarning("Telemetry ingest buffer is full. EventId: {EventId}, MeterId: {MeterId}", eventId, request.reading.MeterId);
+                    return CommandResult.Failure(StatusCodes.Status429TooManyRequests, "Telemetry ingest buffer is full");
+                }
 
                 _logger.LogDebug("Successfully ingested telemetry event. EventId: {EventId}, MeterId: {MeterId}", eventId, request.reading.MeterId);
                 return CommandResult.Success();
