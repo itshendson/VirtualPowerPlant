@@ -22,32 +22,31 @@ namespace Ingestion.Handlers
             _buffer = buffer;
         }
 
-        public async Task<CommandResult> Handle(IngestTelemetryCommand request, CancellationToken cancellationToken)
+        public Task<CommandResult> Handle(IngestTelemetryCommand request, CancellationToken cancellationToken)
         {
             var eventId = Guid.NewGuid().ToString("N");
 
             try
             {
-                var workItem = new BufferItem<TelemetryReadingRequest>(
+                var item = new BufferItem<TelemetryReadingRequest>(
                     Topic: _kafkaOptions.Topics.TelemetryRaw,
                     Key: request.reading.MeterId,
                     Value: request.reading,
                     EventId: eventId);
 
-                await _buffer.EnqueueAsync(workItem, cancellationToken);
+                if (!_buffer.TryEnqueue(item))
+                {
+                    _logger.LogWarning("Telemetry buffer full. Rejecting ingest request. EventId: {EventId}, MeterId: {MeterId}", eventId, request.reading.MeterId);
+                    return Task.FromResult(CommandResult.Failure(StatusCodes.Status503ServiceUnavailable, "Telemetry ingestion buffer is full"));
+                }
 
                 _logger.LogDebug("Successfully ingested telemetry event. EventId: {EventId}, MeterId: {MeterId}", eventId, request.reading.MeterId);
-                return CommandResult.Success();
-            }
-            catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
-            {
-                _logger.LogWarning("Request was cancelled by the client. EventId: {EventId}", eventId);
-                return CommandResult.Failure(StatusCodes.Status499ClientClosedRequest, "Request was cancelled");
+                return Task.FromResult(CommandResult.Success());
             }
             catch (Exception ex)
             {
                 _logger.LogError(ex, "Failed to ingest telemetry event. EventId: {EventId}, MeterId: {MeterId}", eventId, request.reading.MeterId);
-                return CommandResult.Failure("Failed to ingest telemetry reading");
+                return Task.FromResult(CommandResult.Failure("Failed to ingest telemetry reading"));
             }
         }
     }
