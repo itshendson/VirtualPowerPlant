@@ -28,7 +28,7 @@ namespace Ingestion.Handlers
 
             try
             {
-                var workItem = new TelemetryIngestionWorkItem(
+                var workItem = new BufferItem<TelemetryReadingRequest>(
                     Topic: _kafkaOptions.Topics.TelemetryRaw,
                     Key: request.reading.MeterId,
                     Value: request.reading,

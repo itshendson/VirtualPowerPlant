@@ -21,7 +21,7 @@ namespace Ingestion.Infrastructure.Messaging
         {
             while (!cancellationToken.IsCancellationRequested)
             {
-                TelemetryIngestionWorkItem item;
+                BufferItem<TelemetryReadingRequest> item;
 
                 try
                 {
