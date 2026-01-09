@@ -25,6 +25,11 @@ namespace Ingestion.Infrastructure.Messaging
             return _channel.Writer.TryWrite(item);
         }
 
+        public ValueTask EnqueueAsync(TelemetryIngestionWorkItem item, CancellationToken cancellationToken)
+        {
+            return _channel.Writer.WriteAsync(item, cancellationToken);
+        }
+
         public ValueTask<TelemetryIngestionWorkItem> DequeueAsync(CancellationToken cancellationToken)
         {
             return _channel.Reader.ReadAsync(cancellationToken);

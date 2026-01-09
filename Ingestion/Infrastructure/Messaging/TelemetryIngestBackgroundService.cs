@@ -17,11 +17,21 @@ namespace Ingestion.Infrastructure.Messaging
             _producer = producer;
         }
 
-        protected override async Task ExecuteAsync(CancellationToken stoppingToken)
+        protected override async Task ExecuteAsync(CancellationToken cancellationToken)
         {
-            while (!stoppingToken.IsCancellationRequested)
+            while (!cancellationToken.IsCancellationRequested)
             {
-                var item = await _buffer.DequeueAsync(stoppingToken);
+                TelemetryIngestionWorkItem item;
+
+                try
+                {
+                    item = await _buffer.DequeueAsync(cancellationToken);
+                }
+                catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
+                {
+                    _logger.LogInformation("Telemetry sender stopping.");
+                    break;
+                }
 
                 try
                 {
@@ -39,10 +49,6 @@ namespace Ingestion.Infrastructure.Messaging
 
                             _logger.LogDebug("Buffered telemetry event sent. EventId: {EventId}, MeterId: {MeterId}", item.EventId, item.Value.MeterId);
                         });
-                }
-                catch (OperationCanceledException) when (stoppingToken.IsCancellationRequested)
-                {
-                    _logger.LogWarning("Telemetry sender stopping. EventId: {EventId}", item.EventId);
                 }
                 catch (Exception ex)
                 {

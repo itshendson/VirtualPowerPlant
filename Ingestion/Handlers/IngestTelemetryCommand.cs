@@ -34,11 +34,7 @@ namespace Ingestion.Handlers
                     Value: request.reading,
                     EventId: eventId);
 
-                if (!_buffer.TryEnqueue(workItem))
-                {
-                    _logger.LogWarning("Telemetry ingest buffer is full. EventId: {EventId}, MeterId: {MeterId}", eventId, request.reading.MeterId);
-                    return CommandResult.Failure(StatusCodes.Status429TooManyRequests, "Telemetry ingest buffer is full");
-                }
+                await _buffer.EnqueueAsync(workItem, cancellationToken);
 
                 _logger.LogDebug("Successfully ingested telemetry event. EventId: {EventId}, MeterId: {MeterId}", eventId, request.reading.MeterId);
                 return CommandResult.Success();
