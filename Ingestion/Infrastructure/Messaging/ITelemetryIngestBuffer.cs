@@ -7,5 +7,7 @@ namespace Ingestion.Infrastructure.Messaging
         bool TryEnqueue(BufferItem<TelemetryReadingRequest> item);
         ValueTask EnqueueAsync(BufferItem<TelemetryReadingRequest> item, CancellationToken cancellationToken);
         ValueTask<BufferItem<TelemetryReadingRequest>> DequeueAsync(CancellationToken cancellationToken);
+        bool TryDequeue(out BufferItem<TelemetryReadingRequest> item);
+        void Complete();
     }
 }

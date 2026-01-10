@@ -35,5 +35,15 @@ namespace Ingestion.Infrastructure.Messaging
         {
             return _channel.Reader.ReadAsync(cancellationToken);
         }
+
+        public bool TryDequeue(out BufferItem<TelemetryReadingRequest> item)
+        {
+            return _channel.Reader.TryRead(out item);
+        }
+
+        public void Complete()
+        {
+            _channel.Writer.TryComplete();
+        }
     }
 }
