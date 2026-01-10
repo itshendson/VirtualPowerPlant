@@ -80,23 +80,23 @@ namespace Ingestion.Infrastructure.Messaging
             }
         }
 
-        private void SendBufferedItem(BufferItem<TelemetryReadingRequest> item)
+        private void SendBufferedItem(BufferItem<TelemetryReadingRequest> bufferItem)
         {
             try
             {
-                var attemptNumber = item.Attempt + 1;
+                var attemptNumber = bufferItem.Attempt + 1;
 
                 _producer.Produce<string, TelemetryReadingRequest>(
-                    topic: item.Topic,
-                    key: item.Key,
-                    value: item.Value,
+                    topic: bufferItem.Topic,
+                    key: bufferItem.Key,
+                    value: bufferItem.Value,
                     deliveryHandler: report =>
                     {
                         if (report.Status != PersistenceStatus.Persisted || report.Error.IsError)
                         {
                             if (attemptNumber < _maxDeliveryAttempts)
                             {
-                                var retryItem = item with { Attempt = item.Attempt + 1 };
+                                var retryItem = bufferItem with { Attempt = bufferItem.Attempt + 1 };
                                 var delay = GetRetryDelay(retryItem.Attempt);
 
                                 ScheduleRetry(retryItem, delay);
@@ -104,8 +104,8 @@ namespace Ingestion.Infrastructure.Messaging
                                 _logger.LogWarning("Failed to deliver buffered telemetry event. Requeueing for attempt {Attempt}/{MaxAttempts}. EventId: {EventId}, MeterId: {MeterId}, Error: {Error}",
                                     retryItem.Attempt + 1,
                                     _maxDeliveryAttempts,
-                                    item.EventId,
-                                    item.Value.MeterId,
+                                    bufferItem.EventId,
+                                    bufferItem.Value.MeterId,
                                     report.Error.Reason);
 
                                 return;
@@ -114,18 +114,18 @@ namespace Ingestion.Infrastructure.Messaging
                             _logger.LogError("Failed to deliver buffered telemetry event. Dropping after {Attempt}/{MaxAttempts} attempts. EventId: {EventId}, MeterId: {MeterId}, Error: {Error}",
                                 attemptNumber,
                                 _maxDeliveryAttempts,
-                                item.EventId,
-                                item.Value.MeterId,
+                                bufferItem.EventId,
+                                bufferItem.Value.MeterId,
                                 report.Error.Reason);
                             return;
                         }
 
-                        _logger.LogDebug("Buffered telemetry event sent. EventId: {EventId}, MeterId: {MeterId}", item.EventId, item.Value.MeterId);
+                        _logger.LogDebug("Buffered telemetry event sent. EventId: {EventId}, MeterId: {MeterId}", bufferItem.EventId, bufferItem.Value.MeterId);
                     });
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, "Failed to send buffered telemetry event. EventId: {EventId}, MeterId: {MeterId}", item.EventId, item.Value.MeterId);
+                _logger.LogError(ex, "Failed to send buffered telemetry event. EventId: {EventId}, MeterId: {MeterId}", bufferItem.EventId, bufferItem.Value.MeterId);
             }
         }
 
