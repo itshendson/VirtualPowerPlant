@@ -1,6 +1,8 @@
 using Confluent.Kafka;
+using Ingestion.Infrastructure.Configuration;
 using Ingestion.Model;
 using Microsoft.Extensions.Hosting;
+using Microsoft.Extensions.Options;
 using System.Threading.Channels;
 
 namespace Ingestion.Infrastructure.Messaging
@@ -10,12 +12,24 @@ namespace Ingestion.Infrastructure.Messaging
         private readonly ILogger<TelemetryIngestBackgroundService> _logger;
         private readonly ITelemetryIngestBuffer _buffer;
         private readonly ITelemetryProducer _producer;
+        private readonly int _maxDeliveryAttempts;
+        private readonly int _retryBackoffMs;
+        private readonly int _retryBackoffMaxMs;
 
-        public TelemetryIngestBackgroundService(ILogger<TelemetryIngestBackgroundService> logger, ITelemetryIngestBuffer buffer, ITelemetryProducer producer)
+        public TelemetryIngestBackgroundService(
+            ILogger<TelemetryIngestBackgroundService> logger,
+            ITelemetryIngestBuffer buffer,
+            ITelemetryProducer producer,
+            IOptions<TelemetryIngestBufferOptions> bufferOptions)
         {
             _logger = logger;
             _buffer = buffer;
             _producer = producer;
+
+            var options = bufferOptions.Value;
+            _maxDeliveryAttempts = Math.Max(1, options.MaxDeliveryAttempts);
+            _retryBackoffMs = Math.Max(0, options.RetryBackoffMs);
+            _retryBackoffMaxMs = Math.Max(_retryBackoffMs, options.RetryBackoffMaxMs);
         }
 
         protected override async Task ExecuteAsync(CancellationToken cancellationToken)
@@ -70,6 +84,8 @@ namespace Ingestion.Infrastructure.Messaging
         {
             try
             {
+                var attemptNumber = item.Attempt + 1;
+
                 _producer.Produce<string, TelemetryReadingRequest>(
                     topic: item.Topic,
                     key: item.Key,
@@ -78,7 +94,29 @@ namespace Ingestion.Infrastructure.Messaging
                     {
                         if (report.Status != PersistenceStatus.Persisted || report.Error.IsError)
                         {
-                            _logger.LogError("Failed to deliver buffered telemetry event. EventId: {EventId}, MeterId: {MeterId}, Error: {Error}", item.EventId, item.Value.MeterId, report.Error.Reason);
+                            if (attemptNumber < _maxDeliveryAttempts)
+                            {
+                                var retryItem = item with { Attempt = item.Attempt + 1 };
+                                var delay = GetRetryDelay(retryItem.Attempt);
+
+                                ScheduleRetry(retryItem, delay);
+
+                                _logger.LogWarning("Failed to deliver buffered telemetry event. Requeueing for attempt {Attempt}/{MaxAttempts}. EventId: {EventId}, MeterId: {MeterId}, Error: {Error}",
+                                    retryItem.Attempt + 1,
+                                    _maxDeliveryAttempts,
+                                    item.EventId,
+                                    item.Value.MeterId,
+                                    report.Error.Reason);
+
+                                return;
+                            }
+
+                            _logger.LogError("Failed to deliver buffered telemetry event. Dropping after {Attempt}/{MaxAttempts} attempts. EventId: {EventId}, MeterId: {MeterId}, Error: {Error}",
+                                attemptNumber,
+                                _maxDeliveryAttempts,
+                                item.EventId,
+                                item.Value.MeterId,
+                                report.Error.Reason);
                             return;
                         }
 
@@ -89,6 +127,33 @@ namespace Ingestion.Infrastructure.Messaging
             {
                 _logger.LogError(ex, "Failed to send buffered telemetry event. EventId: {EventId}, MeterId: {MeterId}", item.EventId, item.Value.MeterId);
             }
+        }
+
+        private void ScheduleRetry(BufferItem<TelemetryReadingRequest> item, TimeSpan delay)
+        {
+            if (delay <= TimeSpan.Zero)
+            {
+                TryRequeue(item);
+                return;
+            }
+
+            _ = Task.Delay(delay).ContinueWith(_ => TryRequeue(item), TaskScheduler.Default);
+        }
+
+        private void TryRequeue(BufferItem<TelemetryReadingRequest> item)
+        {
+            if (!_buffer.TryEnqueue(item))
+            {
+                _logger.LogWarning("Retry buffer full. Dropping telemetry event after failed requeue. EventId: {EventId}, MeterId: {MeterId}", item.EventId, item.Value.MeterId);
+            }
+        }
+
+        private TimeSpan GetRetryDelay(int attemptsSoFar)
+        {
+            if (_retryBackoffMs <= 0) return TimeSpan.Zero;
+
+            var delayMs = Math.Min(_retryBackoffMs, _retryBackoffMaxMs);
+            return TimeSpan.FromMilliseconds(delayMs);
         }
     }
 }
