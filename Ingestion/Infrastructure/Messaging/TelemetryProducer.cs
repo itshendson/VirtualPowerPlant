@@ -1,6 +1,7 @@
 ﻿
 using Confluent.Kafka;
 using System.Text.Json;
+using System.Threading;
 
 namespace Ingestion.Infrastructure.Messaging
 {
@@ -8,6 +9,7 @@ namespace Ingestion.Infrastructure.Messaging
     {
         private readonly ILogger<TelemetryProducer> _logger;
         private readonly IProducer<string, byte[]> _producer;
+        private int _disposed;
 
         public TelemetryProducer(ILogger<TelemetryProducer> logger, ProducerConfig config)
         {
@@ -47,6 +49,11 @@ namespace Ingestion.Infrastructure.Messaging
 
         public ValueTask DisposeAsync()
         {
+            if (Interlocked.Exchange(ref _disposed, 1) != 0)
+            {
+                return ValueTask.CompletedTask;
+            }
+
             try
             {
                 _producer.Flush(TimeSpan.FromSeconds(5));
@@ -61,11 +68,17 @@ namespace Ingestion.Infrastructure.Messaging
                 _producer.Dispose();
             }
 
+            GC.SuppressFinalize(this);
             return ValueTask.CompletedTask;
         }
 
         public void Dispose()
         {
+            if (Interlocked.Exchange(ref _disposed, 1) != 0)
+            {
+                return;
+            }
+
             try
             {
                 _producer.Flush(TimeSpan.FromSeconds(5));
@@ -78,6 +91,8 @@ namespace Ingestion.Infrastructure.Messaging
             {
                 _producer.Dispose();
             }
+
+            GC.SuppressFinalize(this);
         }
     }
 }

@@ -97,7 +97,7 @@ namespace Ingestion.Infrastructure.Messaging
                             if (attemptNumber < _maxDeliveryAttempts)
                             {
                                 var retryItem = bufferItem with { Attempt = bufferItem.Attempt + 1 };
-                                var delay = GetRetryDelay(retryItem.Attempt);
+                                var delay = GetRetryDelay();
 
                                 ScheduleRetry(retryItem, delay);
 
@@ -148,7 +148,7 @@ namespace Ingestion.Infrastructure.Messaging
             }
         }
 
-        private TimeSpan GetRetryDelay(int attemptsSoFar)
+        private TimeSpan GetRetryDelay()
         {
             if (_retryBackoffMs <= 0) return TimeSpan.Zero;
 
