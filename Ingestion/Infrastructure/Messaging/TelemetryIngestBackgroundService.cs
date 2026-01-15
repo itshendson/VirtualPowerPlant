@@ -10,7 +10,7 @@ namespace Ingestion.Infrastructure.Messaging
     public class TelemetryIngestBackgroundService : BackgroundService
     {
         private readonly ILogger<TelemetryIngestBackgroundService> _logger;
-        private readonly ITelemetryIngestBuffer _buffer;
+        private readonly ITelemetryBuffer _buffer;
         private readonly ITelemetryProducer _producer;
         private readonly int _maxDeliveryAttempts;
         private readonly int _retryBackoffMs;
@@ -18,7 +18,7 @@ namespace Ingestion.Infrastructure.Messaging
 
         public TelemetryIngestBackgroundService(
             ILogger<TelemetryIngestBackgroundService> logger,
-            ITelemetryIngestBuffer buffer,
+            ITelemetryBuffer buffer,
             ITelemetryProducer producer,
             IOptions<TelemetryIngestBufferOptions> bufferOptions)
         {
@@ -36,7 +36,7 @@ namespace Ingestion.Infrastructure.Messaging
         {
             while (true)
             {
-                BufferItem<TelemetryReadingRequest> item;
+                BufferItem<Telemetry> item;
 
                 try
                 {
@@ -80,13 +80,13 @@ namespace Ingestion.Infrastructure.Messaging
             }
         }
 
-        private void SendBufferedItem(BufferItem<TelemetryReadingRequest> bufferItem)
+        private void SendBufferedItem(BufferItem<Telemetry> bufferItem)
         {
             try
             {
                 var attemptNumber = bufferItem.Attempt + 1;
 
-                _producer.Produce<string, TelemetryReadingRequest>(
+                _producer.Produce<string, Telemetry>(
                     topic: bufferItem.Topic,
                     key: bufferItem.Key,
                     value: bufferItem.Value,
@@ -129,7 +129,7 @@ namespace Ingestion.Infrastructure.Messaging
             }
         }
 
-        private void ScheduleRetry(BufferItem<TelemetryReadingRequest> item, TimeSpan delay)
+        private void ScheduleRetry(BufferItem<Telemetry> item, TimeSpan delay)
         {
             if (delay <= TimeSpan.Zero)
             {
@@ -140,7 +140,7 @@ namespace Ingestion.Infrastructure.Messaging
             _ = Task.Delay(delay).ContinueWith(_ => TryRequeue(item), TaskScheduler.Default);
         }
 
-        private void TryRequeue(BufferItem<TelemetryReadingRequest> item)
+        private void TryRequeue(BufferItem<Telemetry> item)
         {
             if (!_buffer.TryEnqueue(item))
             {

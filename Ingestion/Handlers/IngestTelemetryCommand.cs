@@ -7,15 +7,15 @@ using Microsoft.Extensions.Options;
 
 namespace Ingestion.Handlers
 {
-    public record IngestTelemetryCommand(TelemetryReadingRequest reading) : IRequest<CommandResult>;
+    public record IngestTelemetryCommand(Telemetry reading) : IRequest<CommandResult>;
 
     public class IngestTelemetryCommandHandler : IRequestHandler<IngestTelemetryCommand, CommandResult>
     {
         private readonly ILogger<IngestTelemetryCommandHandler> _logger;
         private readonly KafkaOptions _kafkaOptions;
-        private readonly ITelemetryIngestBuffer _buffer;
+        private readonly ITelemetryBuffer _buffer;
 
-        public IngestTelemetryCommandHandler(ILogger<IngestTelemetryCommandHandler> logger, IOptions<KafkaOptions> kafkaOptions, ITelemetryIngestBuffer buffer)
+        public IngestTelemetryCommandHandler(ILogger<IngestTelemetryCommandHandler> logger, IOptions<KafkaOptions> kafkaOptions, ITelemetryBuffer buffer)
         {
             _logger = logger;
             _kafkaOptions = kafkaOptions.Value;
@@ -28,7 +28,7 @@ namespace Ingestion.Handlers
 
             try
             {
-                var item = new BufferItem<TelemetryReadingRequest>(
+                var item = new BufferItem<Telemetry>(
                     Topic: _kafkaOptions.Topics.TelemetryRaw,
                     Key: request.reading.MeterId,
                     Value: request.reading,

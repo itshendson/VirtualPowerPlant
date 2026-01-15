@@ -1,0 +1,18 @@
+syntax = "proto3";
+
+package telemetry.v1;
+
+option csharp_namespace = "Ingestion.Protos";
+
+import "google/protobuf/timestamp.proto";
+
+message TelemetryReading {
+  string meter_id = 1;
+  google.protobuf.Timestamp reading_time = 2;
+  double kw = 3;
+  string gateway_id = 4;
+  string firmware_version = 5;
+  double state_of_charge_percent = 6;
+  string status = 7;
+  optional double temperature_c = 8;
+}

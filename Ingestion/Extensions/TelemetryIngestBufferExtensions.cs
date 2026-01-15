@@ -8,8 +8,13 @@ namespace Ingestion.Extensions
         public static IServiceCollection AddTelemetryIngestBuffer(this IServiceCollection services, IConfiguration configuration)
         {
             services.Configure<TelemetryIngestBufferOptions>(configuration.GetSection("IngestBuffer"));
-            services.AddSingleton<ITelemetryIngestBuffer, TelemetryIngestBuffer>();
+            services.AddSingleton<ITelemetryBuffer, TelemetryBuffer>();
+            return services;
+        }
 
+        public static IServiceCollection AddTelemetryIngestBackgroundService(this IServiceCollection services, IConfiguration configuration)
+        {
+            services.AddHostedService<TelemetryIngestBackgroundService>();
             return services;
         }
     }
