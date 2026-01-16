@@ -56,6 +56,7 @@ namespace Ingestion.Infrastructure.Networking
             }
             catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
             {
+                _logger.LogInformation("Shutting down web socket connection.");
             }
             catch (WebSocketException ex)
             {
