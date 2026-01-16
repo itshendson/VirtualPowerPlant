@@ -3,7 +3,7 @@ using System.ComponentModel.DataAnnotations;
 namespace Ingestion.Model
 {
     /// <summary>
-    /// Represents a single telemetry reading sent by an edge gateway.
+    /// Represents a single telemetry reading of a Battery Energy Storage System (BESS) sent by an edge gateway.
     /// This is the ingestion boundary model.
     /// </summary>
     public sealed class BessTelemetry
