@@ -4,9 +4,9 @@ namespace Ingestion.Infrastructure.Messaging
 {
     public interface ITelemetryBuffer
     {
-        bool TryEnqueue(BufferItem<Telemetry> item);
-        ValueTask<BufferItem<Telemetry>> DequeueAsync(CancellationToken cancellationToken);
-        bool TryDequeue(out BufferItem<Telemetry> item);
+        bool TryEnqueue(BufferItem<BessTelemetry> item);
+        ValueTask<BufferItem<BessTelemetry>> DequeueAsync(CancellationToken cancellationToken);
+        bool TryDequeue(out BufferItem<BessTelemetry> item);
         void Complete();
     }
 }

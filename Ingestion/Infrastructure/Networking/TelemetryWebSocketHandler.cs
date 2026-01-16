@@ -68,7 +68,7 @@ namespace Ingestion.Infrastructure.Networking
             }
         }
 
-        private async Task<Telemetry?> ReceiveTelemetryAsync(WebSocket socket, byte[] buffer, CancellationToken cancellationToken)
+        private async Task<BessTelemetry?> ReceiveTelemetryAsync(WebSocket socket, byte[] buffer, CancellationToken cancellationToken)
         {
             using var payload = new MemoryStream();
 
@@ -124,67 +124,67 @@ namespace Ingestion.Infrastructure.Networking
             }
         }
 
-        private static bool TryMapReading(TelemetryReading reading, out Telemetry mapped, out string error)
+        private static bool TryMapReading(TelemetryReading reading, out BessTelemetry mapped, out string error)
         {
-            if (reading.ReadingTime is null)
+            if (string.IsNullOrWhiteSpace(reading.DeviceId))
             {
                 mapped = null!;
-                error = "ReadingTime is required";
+                error = "DeviceId is required";
                 return false;
             }
 
-            if (double.IsNaN(reading.Kw) || double.IsInfinity(reading.Kw))
+            if (string.IsNullOrWhiteSpace(reading.SiteId))
             {
                 mapped = null!;
-                error = "Kw must be a finite number";
+                error = "SiteId is required";
                 return false;
             }
 
-            if (double.IsNaN(reading.StateOfChargePercent) || double.IsInfinity(reading.StateOfChargePercent))
+            if (reading.Timestamp is null)
             {
                 mapped = null!;
-                error = "StateOfChargePercent must be a finite number";
+                error = "Timestamp is required";
                 return false;
             }
 
-            if (reading.HasTemperatureC && (double.IsNaN(reading.TemperatureC) || double.IsInfinity(reading.TemperatureC)))
+            if (!IsFinite(reading.StateOfChargePercentage))
             {
                 mapped = null!;
-                error = "TemperatureC must be a finite number";
+                error = "StateOfChargePercentage must be a finite number";
                 return false;
             }
 
-            decimal kw;
-            decimal stateOfChargePercent;
-            decimal? temperatureC = null;
-
-            try
-            {
-                kw = Convert.ToDecimal(reading.Kw);
-                stateOfChargePercent = Convert.ToDecimal(reading.StateOfChargePercent);
-
-                if (reading.HasTemperatureC)
-                {
-                    temperatureC = Convert.ToDecimal(reading.TemperatureC);
-                }
-            }
-            catch (Exception)
+            if (!IsFinite(reading.BatteryPowerKw))
             {
                 mapped = null!;
-                error = "Telemetry numeric value is out of range";
+                error = "BatteryPowerKw must be a finite number";
                 return false;
             }
 
-            mapped = new Telemetry
+            if (!IsFinite(reading.UsableEnergyRemainingKWh))
             {
-                MeterId = reading.MeterId,
-                ReadingTimeUtc = ToDateTimeOffset(reading.ReadingTime),
-                Kw = kw,
-                StateOfChargePercent = stateOfChargePercent,
-                Status = reading.Status,
-                TemperatureC = temperatureC,
-                GatewayId = reading.GatewayId,
-                FirmwareVersion = reading.FirmwareVersion
+                mapped = null!;
+                error = "UsableEnergyRemainingKWh must be a finite number";
+                return false;
+            }
+
+            if (!IsFinite(reading.BatteryTemperatureC))
+            {
+                mapped = null!;
+                error = "BatteryTemperatureC must be a finite number";
+                return false;
+            }
+
+            mapped = new BessTelemetry
+            {
+                DeviceId = reading.DeviceId,
+                SiteId = reading.SiteId,
+                Timestamp = ToDateTimeOffset(reading.Timestamp),
+                StateOfChargePercentage = reading.StateOfChargePercentage,
+                BatteryPowerKw = reading.BatteryPowerKw,
+                UsableEnergyRemainingKWh = reading.UsableEnergyRemainingKWh,
+                IsOnline = reading.IsOnline,
+                BatteryTemperatureC = reading.BatteryTemperatureC
             };
             error = string.Empty;
             return true;
@@ -201,7 +201,12 @@ namespace Ingestion.Infrastructure.Networking
             return new DateTimeOffset(utc);
         }
 
-        private static bool TryValidate(Telemetry reading, out IReadOnlyList<string> errors)
+        private static bool IsFinite(double value)
+        {
+            return !double.IsNaN(value) && !double.IsInfinity(value);
+        }
+
+        private static bool TryValidate(BessTelemetry reading, out IReadOnlyList<string> errors)
         {
             var validationResults = new List<ValidationResult>();
             var context = new ValidationContext(reading);

@@ -7,7 +7,7 @@ using Microsoft.Extensions.Options;
 
 namespace Ingestion.Handlers
 {
-    public record IngestTelemetryCommand(Telemetry reading) : IRequest<CommandResult>;
+    public record IngestTelemetryCommand(BessTelemetry reading) : IRequest<CommandResult>;
 
     public class IngestTelemetryCommandHandler : IRequestHandler<IngestTelemetryCommand, CommandResult>
     {
@@ -28,24 +28,24 @@ namespace Ingestion.Handlers
 
             try
             {
-                var item = new BufferItem<Telemetry>(
+                var item = new BufferItem<BessTelemetry>(
                     Topic: _kafkaOptions.Topics.TelemetryRaw,
-                    Key: request.reading.MeterId,
+                    Key: request.reading.DeviceId,
                     Value: request.reading,
                     EventId: eventId);
 
                 if (!_buffer.TryEnqueue(item))
                 {
-                    _logger.LogWarning("Telemetry buffer full. Rejecting ingest request. EventId: {EventId}, MeterId: {MeterId}", eventId, request.reading.MeterId);
+                    _logger.LogWarning("Telemetry buffer full. Rejecting ingest request. EventId: {EventId}, DeviceId: {DeviceId}", eventId, request.reading.DeviceId);
                     return Task.FromResult(CommandResult.Failure(StatusCodes.Status503ServiceUnavailable, "Telemetry ingestion buffer is full"));
                 }
 
-                _logger.LogDebug("Successfully ingested telemetry event. EventId: {EventId}, MeterId: {MeterId}", eventId, request.reading.MeterId);
+                _logger.LogDebug("Successfully ingested telemetry event. EventId: {EventId}, DeviceId: {DeviceId}", eventId, request.reading.DeviceId);
                 return Task.FromResult(CommandResult.Success());
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, "Failed to ingest telemetry event. EventId: {EventId}, MeterId: {MeterId}", eventId, request.reading.MeterId);
+                _logger.LogError(ex, "Failed to ingest telemetry event. EventId: {EventId}, DeviceId: {DeviceId}", eventId, request.reading.DeviceId);
                 return Task.FromResult(CommandResult.Failure("Failed to ingest telemetry reading"));
             }
         }

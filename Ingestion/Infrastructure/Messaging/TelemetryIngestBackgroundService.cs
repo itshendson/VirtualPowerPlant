@@ -36,7 +36,7 @@ namespace Ingestion.Infrastructure.Messaging
         {
             while (true)
             {
-                BufferItem<Telemetry> item;
+                BufferItem<BessTelemetry> item;
 
                 try
                 {
@@ -80,13 +80,13 @@ namespace Ingestion.Infrastructure.Messaging
             }
         }
 
-        private void SendBufferedItem(BufferItem<Telemetry> bufferItem)
+        private void SendBufferedItem(BufferItem<BessTelemetry> bufferItem)
         {
             try
             {
                 var attemptNumber = bufferItem.Attempt + 1;
 
-                _producer.Produce<string, Telemetry>(
+                _producer.Produce<string, BessTelemetry>(
                     topic: bufferItem.Topic,
                     key: bufferItem.Key,
                     value: bufferItem.Value,
@@ -101,35 +101,35 @@ namespace Ingestion.Infrastructure.Messaging
 
                                 ScheduleRetry(retryItem, delay);
 
-                                _logger.LogWarning("Failed to deliver buffered telemetry event. Requeueing for attempt {Attempt}/{MaxAttempts}. EventId: {EventId}, MeterId: {MeterId}, Error: {Error}",
+                                _logger.LogWarning("Failed to deliver buffered telemetry event. Requeueing for attempt {Attempt}/{MaxAttempts}. EventId: {EventId}, DeviceId: {DeviceId}, Error: {Error}",
                                     retryItem.Attempt + 1,
                                     _maxDeliveryAttempts,
                                     bufferItem.EventId,
-                                    bufferItem.Value.MeterId,
+                                    bufferItem.Value.DeviceId,
                                     report.Error.Reason);
 
                                 return;
                             }
 
-                            _logger.LogError("Failed to deliver buffered telemetry event. Dropping after {Attempt}/{MaxAttempts} attempts. EventId: {EventId}, MeterId: {MeterId}, Error: {Error}",
+                            _logger.LogError("Failed to deliver buffered telemetry event. Dropping after {Attempt}/{MaxAttempts} attempts. EventId: {EventId}, DeviceId: {DeviceId}, Error: {Error}",
                                 attemptNumber,
                                 _maxDeliveryAttempts,
                                 bufferItem.EventId,
-                                bufferItem.Value.MeterId,
+                                bufferItem.Value.DeviceId,
                                 report.Error.Reason);
                             return;
                         }
 
-                        _logger.LogDebug("Buffered telemetry event sent. EventId: {EventId}, MeterId: {MeterId}", bufferItem.EventId, bufferItem.Value.MeterId);
+                        _logger.LogDebug("Buffered telemetry event sent. EventId: {EventId}, DeviceId: {DeviceId}", bufferItem.EventId, bufferItem.Value.DeviceId);
                     });
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, "Failed to send buffered telemetry event. EventId: {EventId}, MeterId: {MeterId}", bufferItem.EventId, bufferItem.Value.MeterId);
+                _logger.LogError(ex, "Failed to send buffered telemetry event. EventId: {EventId}, DeviceId: {DeviceId}", bufferItem.EventId, bufferItem.Value.DeviceId);
             }
         }
 
-        private void ScheduleRetry(BufferItem<Telemetry> item, TimeSpan delay)
+        private void ScheduleRetry(BufferItem<BessTelemetry> item, TimeSpan delay)
         {
             if (delay <= TimeSpan.Zero)
             {
@@ -140,11 +140,11 @@ namespace Ingestion.Infrastructure.Messaging
             _ = Task.Delay(delay).ContinueWith(_ => TryRequeue(item), TaskScheduler.Default);
         }
 
-        private void TryRequeue(BufferItem<Telemetry> item)
+        private void TryRequeue(BufferItem<BessTelemetry> item)
         {
             if (!_buffer.TryEnqueue(item))
             {
-                _logger.LogWarning("Retry buffer full. Dropping telemetry event after failed requeue. EventId: {EventId}, MeterId: {MeterId}", item.EventId, item.Value.MeterId);
+                _logger.LogWarning("Retry buffer full. Dropping telemetry event after failed requeue. EventId: {EventId}, DeviceId: {DeviceId}", item.EventId, item.Value.DeviceId);
             }
         }
 

@@ -9,7 +9,6 @@ namespace TelemetrySender;
 internal static class Program
 {
     private const string DefaultUrl = "ws://localhost:5000/ws/telemetry";
-    private static readonly string[] StatusOptions = { "Charging", "Discharging", "Idle", "Fault" };
 
     public static async Task<int> Main(string[] args)
     {
@@ -88,71 +87,60 @@ internal static class Program
     {
         var payload = reading.ToByteArray();
         await socket.SendAsync(payload, WebSocketMessageType.Binary, true, cancellationToken);
-        Console.WriteLine("Sent telemetry: MeterId={0}, Kw={1}, SoC={2}, Status={3}",
-            reading.MeterId,
-            reading.Kw.ToString("0.###", CultureInfo.InvariantCulture),
-            reading.StateOfChargePercent.ToString("0.###", CultureInfo.InvariantCulture),
-            reading.Status);
+        Console.WriteLine("Sent telemetry: DeviceId={0}, SiteId={1}, SoC={2}, PowerKw={3}, Online={4}",
+            reading.DeviceId,
+            reading.SiteId,
+            reading.StateOfChargePercentage.ToString("0.###", CultureInfo.InvariantCulture),
+            reading.BatteryPowerKw.ToString("0.###", CultureInfo.InvariantCulture),
+            reading.IsOnline);
     }
 
     private static TelemetryReading GenerateRandomTelemetry(Random random)
     {
-        var meterId = $"meter-{random.Next(1000, 9999)}";
-        var gatewayId = $"gateway-{random.Next(1, 4)}";
-        var firmware = $"1.0.{random.Next(0, 50)}";
-        var status = StatusOptions[random.Next(StatusOptions.Length)];
+        var deviceId = $"device-{random.Next(1000, 9999)}";
+        var siteId = $"site-{random.Next(1, 100)}";
 
         var kw = Math.Round(random.NextDouble() * 8.0, 3);
         var soc = Math.Round(random.NextDouble() * 100.0, 2);
+        var usableEnergyRemainingKWh = Math.Round(random.NextDouble() * 13.5, 3);
+        var isOnline = random.NextDouble() > 0.1;
         var temperature = Math.Round(15.0 + random.NextDouble() * 20.0, 2);
 
-        var reading = new TelemetryReading
+        return new TelemetryReading
         {
-            MeterId = meterId,
-            ReadingTime = Timestamp.FromDateTime(DateTime.UtcNow),
-            Kw = kw,
-            StateOfChargePercent = soc,
-            Status = status,
-            GatewayId = gatewayId,
-            FirmwareVersion = firmware
+            DeviceId = deviceId,
+            SiteId = siteId,
+            Timestamp = Timestamp.FromDateTime(DateTime.UtcNow),
+            StateOfChargePercentage = soc,
+            BatteryPowerKw = kw,
+            UsableEnergyRemainingKWh = usableEnergyRemainingKWh,
+            IsOnline = isOnline,
+            BatteryTemperatureC = temperature
         };
-
-        if (random.NextDouble() > 0.2)
-        {
-            reading.TemperatureC = temperature;
-        }
-
-        return reading;
     }
 
     private static TelemetryReading PromptTelemetry()
     {
-        var meterId = PromptRequired("MeterId", "meter-1");
-        var readingTime = PromptTimestamp();
-        var kw = PromptDouble("Kw", 0, double.MaxValue, 1.5);
-        var soc = PromptDouble("StateOfChargePercent", 0, 100, 55);
-        var status = PromptStatus("Idle");
-        var gatewayId = PromptRequired("GatewayId", "gateway-1");
-        var firmware = PromptRequired("FirmwareVersion", "1.0.0");
-        var temperature = PromptOptionalDouble("TemperatureC");
+        var deviceId = PromptRequired("DeviceId", "device-1");
+        var siteId = PromptRequired("SiteId", "site-1");
+        var timestamp = PromptTimestamp();
+        var soc = PromptDouble("StateOfChargePercentage", 0, 100, 55);
+        var powerKw = PromptDouble("BatteryPowerKw", 0, double.MaxValue, 1.5);
+        var usableEnergyRemainingKWh = PromptDouble("UsableEnergyRemainingKWh", 0, double.MaxValue, 10.5);
+        var isOnline = PromptBool("IsOnline", true);
+        var batteryTemperatureC = PromptDouble("BatteryTemperatureC", -40, 100, 25);
 
-        var reading = new TelemetryReading
+        return new TelemetryReading
         {
-            MeterId = meterId,
-            ReadingTime = readingTime,
-            Kw = kw,
-            StateOfChargePercent = soc,
-            Status = status,
-            GatewayId = gatewayId,
-            FirmwareVersion = firmware
+            DeviceId = deviceId,
+            SiteId = siteId,
+            Timestamp = timestamp,
+            StateOfChargePercentage = soc,
+            BatteryPowerKw = powerKw,
+            UsableEnergyRemainingKWh = usableEnergyRemainingKWh,
+            IsOnline = isOnline,
+            BatteryTemperatureC = batteryTemperatureC
         };
-
-        if (temperature.HasValue)
-        {
-            reading.TemperatureC = temperature.Value;
-        }
-
-        return reading;
     }
 
     private static void PromptForMissingOptions(Options options)
@@ -199,7 +187,7 @@ internal static class Program
     {
         while (true)
         {
-            Console.Write("ReadingTimeUtc (blank for now): ");
+            Console.Write("Timestamp (blank for now): ");
             var input = Console.ReadLine();
 
             if (string.IsNullOrWhiteSpace(input))
@@ -236,22 +224,6 @@ internal static class Program
         }
     }
 
-    private static string PromptStatus(string defaultValue)
-    {
-        while (true)
-        {
-            Console.Write($"Status ({string.Join("/", StatusOptions)}) [{defaultValue}]: ");
-            var input = Console.ReadLine()?.Trim();
-
-            if (string.IsNullOrWhiteSpace(input))
-            {
-                return defaultValue;
-            }
-
-            return input;
-        }
-    }
-
     private static double PromptDouble(string label, double min, double max, double defaultValue)
     {
         while (true)
@@ -273,24 +245,30 @@ internal static class Program
         }
     }
 
-    private static double? PromptOptionalDouble(string label)
+    private static bool PromptBool(string label, bool defaultValue)
     {
         while (true)
         {
-            Console.Write($"{label} (blank to omit): ");
-            var input = Console.ReadLine();
+            var defaultToken = defaultValue ? "y" : "n";
+            Console.Write($"{label} (y/n) [{defaultToken}]: ");
+            var input = Console.ReadLine()?.Trim();
 
             if (string.IsNullOrWhiteSpace(input))
             {
-                return null;
+                return defaultValue;
             }
 
-            if (double.TryParse(input, NumberStyles.Float, CultureInfo.InvariantCulture, out var value))
+            if (input.Equals("y", StringComparison.OrdinalIgnoreCase) || input.Equals("yes", StringComparison.OrdinalIgnoreCase))
             {
-                return value;
+                return true;
             }
 
-            Console.WriteLine("Enter a number or leave blank.");
+            if (input.Equals("n", StringComparison.OrdinalIgnoreCase) || input.Equals("no", StringComparison.OrdinalIgnoreCase))
+            {
+                return false;
+            }
+
+            Console.WriteLine("Enter y or n.");
         }
     }
 

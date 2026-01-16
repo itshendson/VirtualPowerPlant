@@ -7,7 +7,7 @@ namespace Ingestion.Infrastructure.Messaging
 {
     public class TelemetryBuffer : ITelemetryBuffer
     {
-        private readonly Channel<BufferItem<Telemetry>> _channel;
+        private readonly Channel<BufferItem<BessTelemetry>> _channel;
 
         public TelemetryBuffer(IOptions<TelemetryIngestBufferOptions> options)
         {
@@ -18,20 +18,20 @@ namespace Ingestion.Infrastructure.Messaging
                 SingleWriter = false
             };
 
-            _channel = Channel.CreateBounded<BufferItem<Telemetry>>(channelOptions);
+            _channel = Channel.CreateBounded<BufferItem<BessTelemetry>>(channelOptions);
         }
 
-        public bool TryEnqueue(BufferItem<Telemetry> item)
+        public bool TryEnqueue(BufferItem<BessTelemetry> item)
         {
             return _channel.Writer.TryWrite(item);
         }
 
-        public ValueTask<BufferItem<Telemetry>> DequeueAsync(CancellationToken cancellationToken)
+        public ValueTask<BufferItem<BessTelemetry>> DequeueAsync(CancellationToken cancellationToken)
         {
             return _channel.Reader.ReadAsync(cancellationToken);
         }
 
-        public bool TryDequeue(out BufferItem<Telemetry> item)
+        public bool TryDequeue(out BufferItem<BessTelemetry> item)
         {
             return _channel.Reader.TryRead(out item);
         }
