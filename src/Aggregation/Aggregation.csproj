@@ -8,12 +8,13 @@
   </PropertyGroup>
 
   <ItemGroup>
-    <PackageReference Include="Akka.Cluster" Version="1.5.17" />
-    <PackageReference Include="Akka.Cluster.Sharding" Version="1.5.17" />
-    <PackageReference Include="Akka.Hosting" Version="1.5.17.1" />
+    <PackageReference Include="Akka.Cluster" Version="1.5.58" />
+    <PackageReference Include="Akka.Cluster.Sharding" Version="1.5.58" />
+    <PackageReference Include="Akka.Hosting" Version="1.5.58" />
+    <PackageReference Include="Akka.Remote" Version="1.5.58" />
     <PackageReference Include="Akka.Logger.Extensions.Logging" Version="1.4.22" />
-    <PackageReference Include="Akka.Remote" Version="1.5.17" />
-    <PackageReference Include="Microsoft.Extensions.Diagnostics.HealthChecks" Version="10.0.1" />
-    <PackageReference Include="Microsoft.Extensions.Hosting" Version="10.0.1" />
+    <PackageReference Include="Confluent.Kafka" Version="2.11.0" />
+    <PackageReference Include="Microsoft.Extensions.Diagnostics.HealthChecks" Version="10.0.2" />
+    <PackageReference Include="Microsoft.Extensions.Hosting" Version="10.0.2" />
   </ItemGroup>
 </Project>

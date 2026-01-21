@@ -29,6 +29,7 @@ namespace Ingestion.Extensions
             });
 
             services.AddSingleton<ITelemetryProducer, TelemetryProducer>();
+            services.AddHostedService<KafkaReadinessService>();
 
             return services;
         }

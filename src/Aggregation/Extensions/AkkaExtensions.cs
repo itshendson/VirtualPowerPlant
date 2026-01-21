@@ -15,7 +15,6 @@ public static class AkkaExtensions
     {
         services.AddOptions<HierarchyOptions>().BindConfiguration("Aggregation:Hierarchy");
         services.AddSingleton<IHierarchyResolver, InMemoryHierarchyResolver>();
-        services.AddSingleton<IAggregatePublisher, LoggingAggregatePublisher>();
 
         services.AddAkka("aggregation-actor-system", (akkaBuilder, sp) =>
         {
@@ -30,7 +29,8 @@ public static class AkkaExtensions
             {
                 var shardCount = configuration.GetValue("Aggregation:Sharding:ShardCount", 100);
                 var messageExtractor = new EntityMessageExtractor(shardCount);
-                var shardingSettings = ClusterShardingSettings.Create(system).WithRole(ActorNames.ClusterRole);
+                var sharding = ClusterSharding.Get(system);
+                var shardingSettings = sharding.Settings.WithRole(ActorNames.ClusterRole);
 
                 var hierarchyResolver = sp.GetRequiredService<IHierarchyResolver>();
                 var publisher = sp.GetRequiredService<IAggregatePublisher>();
@@ -38,19 +38,19 @@ public static class AkkaExtensions
                     Props.Create(() => new AggregatePublisherActor(publisher)),
                     ActorNames.AggregatePublisher);
 
-                var regionShard = ClusterSharding.Get(system).Start(
+                var regionShard = sharding.Start(
                     ActorNames.RegionShard,
                     entityId => RegionActor.Props(entityId, publisherActor),
                     shardingSettings,
                     messageExtractor);
 
-                var substationShard = ClusterSharding.Get(system).Start(
+                var substationShard = sharding.Start(
                     ActorNames.SubstationShard,
                     entityId => SubstationActor.Props(entityId, hierarchyResolver, regionShard, publisherActor),
                     shardingSettings,
                     messageExtractor);
 
-                var siteShard = ClusterSharding.Get(system).Start(
+                var siteShard = sharding.Start(
                     ActorNames.SiteShard,
                     entityId => SiteActor.Props(entityId, hierarchyResolver, substationShard, publisherActor),
                     shardingSettings,

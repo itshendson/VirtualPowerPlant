@@ -8,7 +8,7 @@ namespace TelemetrySender;
 
 internal static class Program
 {
-    private const string DefaultUrl = "ws://localhost:5000/ws/telemetry";
+    private const string DefaultUrl = "ws://localhost:5041/ws/telemetry";
 
     public static async Task<int> Main(string[] args)
     {
@@ -97,13 +97,38 @@ internal static class Program
 
     private static TelemetryReading GenerateRandomTelemetry(Random random)
     {
-        var deviceId = $"device-{random.Next(1000, 9999)}";
-        var siteId = $"site-{random.Next(1, 100)}";
+        var siteIds = new[]
+        {
+            "site-vancouver-mpl-1",
+            "site-vancouver-csq-1",
+            "site-vancouver-dal-grauer-1",
+            "site-vancouver-murrin-1",
+            "site-vancouver-sperling-1",
+            "site-vancouver-west-end-1",
+            "site-surrey-ingledow-1",
+            "site-surrey-fleetwood-1",
+            "site-surrey-whalley-1",
+            "site-surrey-nicomekl-1",
+            "site-surrey-centre-1",
+            "site-burnaby-horne-payne-1",
+            "site-burnaby-newell-1",
+            "site-burnaby-barnard-1",
+            "site-burnaby-metrotown-1",
+            "site-richmond-kidd-1-1",
+            "site-richmond-kidd-2-1",
+            "site-richmond-steveston-1",
+            "site-richmond-lulu-1",
+            "site-richmond-terminal-1"
+        };
+        var deviceIds = new[] { "pw-1", "pw-2", "pw-3" };
 
-        var kw = Math.Round(random.NextDouble() * 8.0, 3);
-        var soc = Math.Round(random.NextDouble() * 100.0, 2);
-        var usableEnergyRemainingKWh = Math.Round(random.NextDouble() * 13.5, 3);
+        var siteId = siteIds[random.Next(siteIds.Length)];
+        var deviceId = $"{siteId}-{deviceIds[random.Next(deviceIds.Length)]}";
+
         var isOnline = random.NextDouble() > 0.1;
+        var soc = Math.Round(random.NextDouble() * 100.0, 2);
+        var usableEnergyRemainingKWh = Math.Round(soc / 100.0 * 13.5, 3);
+        var kw = Math.Round((random.NextDouble() * 6.0 - 3.0), 3);
         var temperature = Math.Round(15.0 + random.NextDouble() * 20.0, 2);
 
         return new TelemetryReading
@@ -112,7 +137,7 @@ internal static class Program
             SiteId = siteId,
             Timestamp = Timestamp.FromDateTime(DateTime.UtcNow),
             StateOfChargePercentage = soc,
-            BatteryPowerKw = kw,
+            BatteryPowerKw = isOnline ? kw : 0,
             UsableEnergyRemainingKWh = usableEnergyRemainingKWh,
             IsOnline = isOnline,
             BatteryTemperatureC = temperature

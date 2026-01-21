@@ -45,13 +45,14 @@ public sealed class SiteActor : ReceiveActor
             return new AggregateMetrics(0, 0, 0, 0, 1, 0);
         }
 
-        var confidence = Math.Clamp(telemetry.Confidence, 0.0, 1.0);
-        var confidenceWeightedEnergy = telemetry.UsableEnergyKwh * confidence;
+        var dischargeKw = Math.Max(0, telemetry.BatteryPowerKw);
+        var chargeKw = Math.Max(0, -telemetry.BatteryPowerKw);
+        var confidenceWeightedEnergy = telemetry.UsableEnergyRemainingKWh;
 
         return new AggregateMetrics(
-            telemetry.UsableEnergyKwh,
-            telemetry.AvailableDischargePowerKw,
-            telemetry.AvailableChargePowerKw,
+            telemetry.UsableEnergyRemainingKWh,
+            dischargeKw,
+            chargeKw,
             1,
             0,
             confidenceWeightedEnergy);
