@@ -2,6 +2,7 @@
   <Folder Name="/src/">
     <Project Path="src/Aggregation/Aggregation.csproj" />
     <Project Path="src/Ingestion/Ingestion.csproj" />
+    <Project Path="src/MetricsDashboard/MetricsDashboard.csproj" />
     <Project Path="src/TelemetrySender/TelemetrySender.csproj" />
   </Folder>
 </Solution>

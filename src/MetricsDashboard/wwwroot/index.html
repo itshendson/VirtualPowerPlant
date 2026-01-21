@@ -1,0 +1,87 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Virtual Power Plant Monitor</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;600;700&family=Instrument+Sans:wght@400;500;600&display=swap"
+      rel="stylesheet"
+    />
+    <link rel="stylesheet" href="site.css" />
+  </head>
+  <body>
+    <div class="ambient" aria-hidden="true"></div>
+    <main class="page">
+      <header class="hero">
+        <div class="hero-badge">Aggregation Live</div>
+        <h1>Virtual Power Plant Monitor</h1>
+        <p>
+          Track real-time battery capacity and power across sites, substations, and regions.
+        </p>
+        <div class="hero-actions">
+          <button class="refresh" type="button" id="refresh">Refresh now</button>
+          <div class="timestamp">
+            Last update: <span id="last-updated">waiting for data</span>
+          </div>
+        </div>
+      </header>
+
+      <section class="summary" id="summary">
+        <div class="summary-card">
+          <div class="summary-title">Regions</div>
+          <div class="summary-value" id="regions-count">0</div>
+          <div class="summary-meta" id="regions-total">Energy 0 kWh</div>
+        </div>
+        <div class="summary-card">
+          <div class="summary-title">Substations</div>
+          <div class="summary-value" id="substations-count">0</div>
+          <div class="summary-meta" id="substations-total">Energy 0 kWh</div>
+        </div>
+        <div class="summary-card">
+          <div class="summary-title">Sites</div>
+          <div class="summary-value" id="sites-count">0</div>
+          <div class="summary-meta" id="sites-total">Energy 0 kWh</div>
+        </div>
+      </section>
+
+      <section class="panel">
+        <div class="panel-header">
+          <div>
+            <h2>Regional overview</h2>
+            <p>Top-level capacity and availability across each operating region.</p>
+          </div>
+        </div>
+        <div class="grid" id="regions-grid"></div>
+      </section>
+
+      <section class="panel">
+        <div class="panel-header">
+          <div>
+            <h2>Substation view</h2>
+            <p>Aggregates by substation with live charge and discharge windows.</p>
+          </div>
+        </div>
+        <div class="grid" id="substations-grid"></div>
+      </section>
+
+      <section class="panel">
+        <div class="panel-header">
+          <div>
+            <h2>Site view</h2>
+            <p>Individual battery sites and their current operating status.</p>
+          </div>
+        </div>
+        <div class="grid" id="sites-grid"></div>
+      </section>
+    </main>
+
+    <footer class="footer">
+      Data source: Aggregation service
+    </footer>
+
+    <script src="app.js"></script>
+  </body>
+</html>
