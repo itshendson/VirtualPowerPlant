@@ -1,17 +1,36 @@
 # VirtualPowerPlant
 
-## Business case
-Utilities need real-time visibility into distributed battery storage to balance load, handle outages, and optimize energy flows. This project simulates a fleet of edge devices streaming battery telemetry and aggregates it into a digital twin of sites, substations, and regions.
+Real-time telemetry platform that streams battery data, aggregates it into a digital twin, and visualizes live fleet performance.
+
+![TelemetrySender console generating random telemetry while the Metrics Dashboard updates live](docs/VPP-Showcase.gif)
+
+*TelemetrySender streams random telemetry over WebSockets while the live dashboard updates in real time.*
 
 ## Features
-<b>WebSocket Telemetry Ingestion</b>
-Binary protobuf telemetry is ingested over WebSockets, validated, and mapped into domain models.
+- **High-throughput ingestion** over WebSockets with binary protobuf telemetry.
+- **Backpressure-friendly buffering** via `ITelemetryIngestBuffer` to decouple ingest from Kafka.
+- **Event-driven aggregation** using Akka.NET Cluster + Sharding for region/substation/site rollups.
+- **Live dashboard UX** with near-real-time metrics, trends, and animated sparklines.
 
-<b>Buffer - Decouple Ingestion from Kafka</b>
-Buffer decouples the telemetry ingest path from Kafka. When edge devices ping the endpoint, it enqueues its payload to the `ITelemetryIngestBuffer` and the thread is released. The `TelemetryIngestBackgroundService` is responsible for dequeuing work items to kafka. In real world production environment, it would better to use durable buffer like Redis instead of the in-memory buffer that is currently being used.
+## Architecture (high level)
+The system is split into focused services so ingestion, aggregation, and visualization scale independently.
 
-<b>Kafka - Decouple Ingestion Layer from Consumers</b>
-The Ingestion microservice is responsible for ingesting data from tens of thousands of edge devices. The microservice can be scaled and in production systems, a load balancer would be used to spread network traffic to reduce load on individual instance of the Ingestion service.
+1. TelemetrySender simulates edge devices, sending protobuf telemetry over WebSockets.
+2. Ingestion accepts WebSocket telemetry, validates it, buffers it, and publishes to Kafka.
+3. Aggregation consumes Kafka events, updates the Akka.NET digital twin, and maintains aggregate snapshots.
+4. MetricsDashboard serves a lightweight web UI and exposes `/api/metrics/*` for the live dashboard.
 
-<b>Akka Cluster Digital Twin</b>
-Akka.NET Cluster + Sharding model the region/substation/site hierarchy and compute aggregates from ingested telemetry.
+```
+TelemetrySender
+    │  WebSocket (protobuf)
+    ▼
+Ingestion ──► Buffer ──► Kafka ──► Aggregation (Akka.NET cluster)
+                                          │
+                                          ▼
+                                 Metrics API + Dashboard
+```
+
+## Limitations (production considerations)
+- The current ingest buffer is in-memory; production would use a durable queue or datastore (e.g., Redis) to avoid data loss and enable replay.
+- Backpressure is simplified; a real deployment would apply reactive backpressure to protect Kafka and downstream consumers.
+- Observability is minimal; production would include structured logs, tracing, and metrics with alerting.

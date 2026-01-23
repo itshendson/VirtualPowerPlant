@@ -7,7 +7,7 @@
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
     <link
-      href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;600;700&family=Instrument+Sans:wght@400;500;600&display=swap"
+      href="https://fonts.googleapis.com/css2?family=Sora:wght@400;600;700&family=Source+Sans+3:wght@400;500;600&display=swap"
       rel="stylesheet"
     />
     <link rel="stylesheet" href="site.css" />
@@ -34,16 +34,45 @@
           <div class="summary-title">Regions</div>
           <div class="summary-value" id="regions-count">0</div>
           <div class="summary-meta" id="regions-total">Energy 0 kWh</div>
+          <div class="summary-chart" id="regions-sparkline"></div>
         </div>
         <div class="summary-card">
           <div class="summary-title">Substations</div>
           <div class="summary-value" id="substations-count">0</div>
           <div class="summary-meta" id="substations-total">Energy 0 kWh</div>
+          <div class="summary-chart" id="substations-sparkline"></div>
         </div>
         <div class="summary-card">
           <div class="summary-title">Sites</div>
           <div class="summary-value" id="sites-count">0</div>
           <div class="summary-meta" id="sites-total">Energy 0 kWh</div>
+          <div class="summary-chart" id="sites-sparkline"></div>
+        </div>
+      </section>
+
+      <section class="panel trends">
+        <div class="panel-header">
+          <div>
+            <h2>Live performance</h2>
+            <p>Rolling 10-minute trends across the fleet.</p>
+          </div>
+        </div>
+        <div class="trend-grid">
+          <article class="trend-card">
+            <div class="trend-label">Total available energy</div>
+            <div class="trend-value" id="trend-energy">0 kWh</div>
+            <div class="trend-chart" id="trend-energy-chart"></div>
+          </article>
+          <article class="trend-card">
+            <div class="trend-label">Available discharge</div>
+            <div class="trend-value" id="trend-discharge">0 kW</div>
+            <div class="trend-chart" id="trend-discharge-chart"></div>
+          </article>
+          <article class="trend-card">
+            <div class="trend-label">Available charge</div>
+            <div class="trend-value" id="trend-charge">0 kW</div>
+            <div class="trend-chart" id="trend-charge-chart"></div>
+          </article>
         </div>
       </section>
 
