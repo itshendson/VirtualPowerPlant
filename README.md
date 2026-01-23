@@ -4,7 +4,7 @@ Real-time telemetry platform that streams battery data, aggregates it into a dig
 
 ![TelemetrySender console generating random telemetry while the Metrics Dashboard updates live](docs/VPP-Showcase.gif)
 
-*TelemetrySender streams random telemetry over WebSockets while the live dashboard updates in real time.*
+*TelemetrySender streams random telemetry over WebSockets while the live dashboard updates in real time. My core focus was the ingestion and aggregation services; TelemetrySender and the dashboard UI were generated to keep the emphasis on backend work.*
 
 ## Features
 - **High-throughput ingestion** over WebSockets with binary protobuf telemetry.
