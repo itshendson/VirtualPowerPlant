@@ -17,6 +17,13 @@ namespace Ingestion.Model
         public string DeviceId { get; init; } = string.Empty;
 
         /// <summary>
+        /// Unique identifier for this telemetry event, used for idempotency.
+        /// </summary>
+        [Required(ErrorMessage = "EventId is required")]
+        [StringLength(64, MinimumLength = 1, ErrorMessage = "EventId must be between 1 and 64 characters")]
+        public string EventId { get; init; } = string.Empty;
+
+        /// <summary>
         /// Identifier for the site that owns the powerwall.
         /// </summary>
         [Required(ErrorMessage = "SiteId is required")]

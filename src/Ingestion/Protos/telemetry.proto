@@ -15,4 +15,5 @@ message TelemetryReading {
   double usable_energy_remaining_k_wh = 6;
   bool is_online = 7;
   double battery_temperature_c = 8;
+  string event_id = 9;
 }

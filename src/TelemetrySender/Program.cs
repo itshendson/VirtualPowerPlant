@@ -134,6 +134,7 @@ internal static class Program
         return new TelemetryReading
         {
             DeviceId = deviceId,
+            EventId = Guid.NewGuid().ToString("N"),
             SiteId = siteId,
             Timestamp = Timestamp.FromDateTime(DateTime.UtcNow),
             StateOfChargePercentage = soc,
@@ -158,6 +159,7 @@ internal static class Program
         return new TelemetryReading
         {
             DeviceId = deviceId,
+            EventId = Guid.NewGuid().ToString("N"),
             SiteId = siteId,
             Timestamp = timestamp,
             StateOfChargePercentage = soc,

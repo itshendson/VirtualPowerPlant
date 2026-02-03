@@ -133,6 +133,13 @@ namespace Ingestion.Infrastructure.Networking
                 return false;
             }
 
+            if (string.IsNullOrWhiteSpace(reading.EventId))
+            {
+                mapped = null!;
+                error = "EventId is required";
+                return false;
+            }
+
             if (string.IsNullOrWhiteSpace(reading.SiteId))
             {
                 mapped = null!;
@@ -178,6 +185,7 @@ namespace Ingestion.Infrastructure.Networking
             mapped = new BessTelemetry
             {
                 DeviceId = reading.DeviceId,
+                EventId = reading.EventId,
                 SiteId = reading.SiteId,
                 Timestamp = ToDateTimeOffset(reading.Timestamp),
                 StateOfChargePercentage = reading.StateOfChargePercentage,

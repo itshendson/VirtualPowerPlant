@@ -1,4 +1,5 @@
 using Akka.Actor;
+using System.Collections.Generic;
 using Aggregation.Infrastructure;
 using Aggregation.Messages;
 using Aggregation.Model;
@@ -11,6 +12,8 @@ public sealed class SiteActor : ReceiveActor
     private readonly IHierarchyResolver _hierarchyResolver;
     private readonly IActorRef _substationShard;
     private readonly IActorRef _publisher;
+    private readonly Dictionary<string, string> _lastEventIds = new(StringComparer.Ordinal);
+    private readonly Dictionary<string, DateTimeOffset> _lastTimestamps = new(StringComparer.Ordinal);
     private SiteState _state = SiteState.Empty;
 
     public SiteActor(string siteId, IHierarchyResolver hierarchyResolver, IActorRef substationShard, IActorRef publisher)
@@ -25,6 +28,11 @@ public sealed class SiteActor : ReceiveActor
 
     private void HandleTelemetry(SiteTelemetryReceived message)
     {
+        if (!ShouldProcess(message.Telemetry))
+        {
+            return;
+        }
+
         var metrics = BuildMetrics(message.Telemetry);
         _state = _state with
         {
@@ -36,6 +44,35 @@ public sealed class SiteActor : ReceiveActor
         var substationId = _hierarchyResolver.ResolveSubstationId(_siteId);
         _publisher.Tell(new SiteAggregate(_siteId, substationId, metrics, message.ReceivedAt));
         _substationShard.Tell(new SiteAggregateUpdated(substationId, _siteId, metrics));
+    }
+
+    private bool ShouldProcess(BessTelemetry telemetry)
+    {
+        if (string.IsNullOrWhiteSpace(telemetry.DeviceId))
+        {
+            return false;
+        }
+
+        if (!string.IsNullOrWhiteSpace(telemetry.EventId)
+            && _lastEventIds.TryGetValue(telemetry.DeviceId, out var lastEventId)
+            && string.Equals(lastEventId, telemetry.EventId, StringComparison.Ordinal))
+        {
+            return false;
+        }
+
+        if (_lastTimestamps.TryGetValue(telemetry.DeviceId, out var lastTimestamp)
+            && telemetry.Timestamp <= lastTimestamp)
+        {
+            return false;
+        }
+
+        if (!string.IsNullOrWhiteSpace(telemetry.EventId))
+        {
+            _lastEventIds[telemetry.DeviceId] = telemetry.EventId;
+        }
+
+        _lastTimestamps[telemetry.DeviceId] = telemetry.Timestamp;
+        return true;
     }
 
     private static AggregateMetrics BuildMetrics(BessTelemetry telemetry)
